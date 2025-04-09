@@ -5,20 +5,6 @@ import os
 import threading
 import json
 import csv
-import blake3
-import pyhashxx
-import cityhash
-import farmhash
-import mmh3
-# import k12
-# 1import streebog
-# import fsb
-# import meowhash
-# import wyhash
-# import t1ha
-# import highwayhash
-# import xxhash
-
 from datetime import datetime
 from tkinterdnd2 import TkinterDnD, DND_FILES
 
@@ -219,12 +205,8 @@ class UltimateHashCalculator(TkinterDnD.Tk):
         self.hash_algorithm = tk.StringVar(value="md5")
         hash_menu = ttk.Combobox(
             input_frame, textvariable=self.hash_algorithm,
-            values=["md5", "sha1", "sha224", "sha256", "sha384", "sha512", 
-                    "sha3_224", "sha3_256", "sha3_384", "sha3_512",
-                    "blake2b", "blake2s", "shake128", "shake256", "whirlpool", 
-                    "ripemd160", "ripemd320", "blake3", "sm3", "tiger"
-            ],
-            state="readonly", width=12)
+            values=["md5", "sha1", "sha256", "sha512"], 
+            state="readonly", width=8)
         hash_menu.pack(side=tk.LEFT)
         hash_menu.bind("<<ComboboxSelected>>", self.on_hash_algorithm_change)
 
@@ -339,16 +321,6 @@ class UltimateHashCalculator(TkinterDnD.Tk):
         ttk.Checkbutton(opt_frame, text="检测重复", 
                        variable=self.auto_check_duplicates_var).pack(side=tk.LEFT, padx=5)
         
-        # 添加BLAKE2输出长度选项
-        self.blake_length_frame = ttk.Frame(opt_frame)
-        ttk.Label(self.blake_length_frame, text="BLAKE2长度:").pack(side=tk.LEFT)
-        self.blake_length = tk.StringVar(value="512")
-        length_menu = ttk.Combobox(
-            self.blake_length_frame, textvariable=self.blake_length,
-            values=["64", "128", "256", "384", "512"], width=4, state="readonly")
-        length_menu.pack(side=tk.LEFT, padx=2)
-        self.blake_length_frame.pack(side=tk.LEFT, padx=5)
-
         # 比对目标
         self.compare_target_frame = ttk.Frame(opt_frame)
         ttk.Label(self.compare_target_frame, text="目标:").pack(side=tk.LEFT)
@@ -730,15 +702,7 @@ class UltimateHashCalculator(TkinterDnD.Tk):
 
     def on_hash_algorithm_change(self, event=None):
         """哈希算法改变事件"""
-        algorithm = self.hash_algorithm.get()
-        # 显示/隐藏BLAKE2长度选项
-        if algorithm in ["blake2b", "blake2s"]:
-            self.blake_length_frame.pack(side=tk.LEFT, padx=5)
-        else:
-            self.blake_length_frame.pack_forget()
-        
         self.toggle_input_method()
-
 
     def toggle_compare_mode(self):
         """切换比对模式"""
@@ -933,60 +897,26 @@ class UltimateHashCalculator(TkinterDnD.Tk):
         """计算哈希值"""
         try:
             algorithm = self.hash_algorithm.get()
-            blake_length = int(self.blake_length.get()) if algorithm in ["blake2b", "blake2s"] else None
-
             if self.input_method.get() == "text":
-                self.calculate_text_hash(algorithm, blake_length)
+                self.calculate_text_hash(algorithm)
             elif self.input_method.get() == "file":
-                self.calculate_single_file_hash(algorithm, blake_length)
+                self.calculate_single_file_hash(algorithm)
             elif self.input_method.get() == "multi_file":
-                self.calculate_multiple_files_hash(algorithm, blake_length)
+                self.calculate_multiple_files_hash(algorithm)
             elif self.input_method.get() == "directory":
-                self.calculate_directory_hash(algorithm, blake_length)
+                self.calculate_directory_hash(algorithm)
         except Exception as e:
             self.show_error(f"计算过程中发生错误: {str(e)}")
-            print(f"计算过程中发生错误: {str(e)}")
+            print(f"Error calculating hash: {str(e)}")
 
-    def calculate_text_hash(self, algorithm, blake_length=None):
+    def calculate_text_hash(self, algorithm):
         """计算文本哈希"""
         content = self.text_input.get("1.0", tk.END).encode('utf-8')
         if not content.strip():
             self.show_warning("请输入要计算哈希的文本内容")
             return
-
-        # 计算哈希值
-        if algorithm == "blake3":
-            hash_value = blake3.blake3(content).hexdigest()
-        elif algorithm == "siphash":
-            hash_value = hex(pyhashxx.hash64(content))[2:]
-        elif algorithm == "cityhash":
-            hash_value = hex(cityhash.CityHash64(content))[2:]
-        elif algorithm == "farmhash":
-            hash_value = hex(farmhash.hash64(content))[2:]
-        elif algorithm == "murmurhash":
-            hash_value = hex(mmh3.hash64(content)[0])[2:]
-        elif algorithm == "kangarootwelve":
-            hash_value = k12.KangarooTwelve().update(content).hexdigest()
-        elif algorithm == "streebog":
-            hash_value = streebog.hash(content).hex()
-        elif algorithm == "fsb":
-            hash_value = fsb.hash(content).hex()
-        elif algorithm == "meowhash":
-            hash_value = meowhash.hash(content).hex()
-        elif algorithm == "wyhash":
-            hash_value = hex(wyhash.hash(content))[2:]
-        elif algorithm == "t1ha":
-            hash_value = hex(t1ha.hash64(content))[2:]
-        elif algorithm == "highwayhash":
-            hash_value = hex(highwayhash.highwayhash_64(content, 0))[2:]
-        elif algorithm == "xxhash3":
-            hash_value = hex(xxhash.xxh3_64(content))[2:]
-        elif algorithm in ["blake2b", "blake2s"] and blake_length:
-            hash_obj = hashlib.new(algorithm, digest_size=blake_length//8)
-            hash_obj.update(content)
-            hash_value = hash_obj.hexdigest()
-        else:
-            hash_obj = hashlib.new(algorithm)
+        
+        hash_obj = hashlib.new(algorithm)
         hash_obj.update(content)
         hash_value = hash_obj.hexdigest()
         
@@ -1008,7 +938,7 @@ class UltimateHashCalculator(TkinterDnD.Tk):
         if self.compare_var.get():
             self.handle_compare(hash_value)
 
-    def calculate_single_file_hash(self, algorithm, blake_length=None):
+    def calculate_single_file_hash(self, algorithm):
         """计算单个文件哈希"""
         filepath = self.file_path.get()
         if not filepath:
@@ -1019,38 +949,8 @@ class UltimateHashCalculator(TkinterDnD.Tk):
             self.show_error("文件不存在或路径无效")
             return
         
-        # 初始化哈希对象
-        if algorithm == "blake3":
-            hash_obj = blake3.blake3()
-        elif algorithm == "siphash":
-            hash_obj = pyhashxx.Hasher()
-        elif algorithm == "cityhash":
-            hash_value = hex(cityhash.CityHash64(open(filepath, 'rb').read()))[2:]
-        elif algorithm == "farmhash":
-            hash_value = hex(farmhash.hash64(open(filepath, 'rb').read()))[2:]
-        elif algorithm == "murmurhash":
-            hash_value = hex(mmh3.hash64(open(filepath, 'rb').read())[0])[2:]
-        elif algorithm == "kangarootwelve":
-            hash_obj = k12.KangarooTwelve()
-        elif algorithm == "streebog":
-            hash_obj = streebog.Hasher()
-        elif algorithm == "fsb":
-            hash_obj = fsb.Hasher()
-        elif algorithm == "meowhash":
-            hash_obj = meowhash.Hasher()
-        elif algorithm == "wyhash":
-            hash_obj = wyhash.Hasher()
-        elif algorithm == "t1ha":
-            hash_obj = t1ha.Hasher64()
-        elif algorithm == "highwayhash":
-            hash_obj = highwayhash.HighwayHash64(0)
-        elif algorithm == "xxhash3":
-            hash_obj = xxhash.xxh3_64()
-        elif algorithm in ["blake2b", "blake2s"] and blake_length:
-            hash_obj = hashlib.new(algorithm, digest_size=blake_length//8)
-        else:
-            hash_obj = hashlib.new(algorithm)
-
+        # 计算大文件的哈希
+        hash_obj = hashlib.new(algorithm)
         total_size = os.path.getsize(filepath)
         processed_size = 0
         
@@ -1061,26 +961,12 @@ class UltimateHashCalculator(TkinterDnD.Tk):
                         self.status_var.set("计算已停止")
                         return
                     
-                    if algorithm in ["cityhash", "farmhash", "murmurhash"]:
-                        continue  # 这些算法需要一次性计算
-                    
                     hash_obj.update(chunk)
                     processed_size += len(chunk)
                     progress = (processed_size / total_size) * 100
                     self.progress_var.set(progress)
             
-            if algorithm in ["cityhash", "farmhash", "murmurhash"]:
-                # 一次性计算整个文件
-                content = open(filepath, 'rb').read()
-                if algorithm == "cityhash":
-                    hash_value = hex(cityhash.CityHash64(content))[2:]
-                elif algorithm == "farmhash":
-                    hash_value = hex(farmhash.hash64(content))[2:]
-                elif algorithm == "murmurhash":
-                    hash_value = hex(mmh3.hash64(content)[0])[2:]
-            else:
-                hash_value = hash_obj.hexdigest()
-            
+            hash_value = hash_obj.hexdigest()
             if self.uppercase_var.get():
                 hash_value = hash_value.upper()
             
@@ -1104,7 +990,7 @@ class UltimateHashCalculator(TkinterDnD.Tk):
         except IOError as e:
             self.show_error(f"读取文件时出错: {str(e)}")
 
-    def calculate_multiple_files_hash(self, algorithm, blake_length=None):
+    def calculate_multiple_files_hash(self, algorithm):
         """计算多个文件哈希"""
         file_count = self.multi_file_listbox.size()
         if file_count == 0:
@@ -1134,53 +1020,15 @@ class UltimateHashCalculator(TkinterDnD.Tk):
             self.status_var.set(f"正在计算: {os.path.basename(filepath)} ({i+1}/{file_count})")
             
             # 计算哈希
-            if algorithm == "blake3":
-                hash_obj = blake3.blake3()
-            elif algorithm == "siphash":
-                hash_obj = pyhashxx.Hasher()
-            elif algorithm == "cityhash":
-                content = open(filepath, 'rb').read()
-                hash_value = hex(cityhash.CityHash64(content))[2:]
-            elif algorithm == "farmhash":
-                content = open(filepath, 'rb').read()
-                hash_value = hex(farmhash.hash64(content))[2:]
-            elif algorithm == "murmurhash":
-                content = open(filepath, 'rb').read()
-                hash_value = hex(mmh3.hash64(content)[0])[2:]
-            elif algorithm == "kangarootwelve":
-                hash_obj = k12.KangarooTwelve()
-            elif algorithm == "streebog":
-                hash_obj = streebog.Hasher()
-            elif algorithm == "fsb":
-                hash_obj = fsb.Hasher()
-            elif algorithm == "meowhash":
-                hash_obj = meowhash.Hasher()
-            elif algorithm == "wyhash":
-                hash_obj = wyhash.Hasher()
-            elif algorithm == "t1ha":
-                hash_obj = t1ha.Hasher64()
-            elif algorithm == "highwayhash":
-                hash_obj = highwayhash.HighwayHash64(0)
-            elif algorithm == "xxhash3":
-                hash_obj = xxhash.xxh3_64()
-            elif algorithm in ["blake2b", "blake2s"] and blake_length:
-                hash_obj = hashlib.new(algorithm, digest_size=blake_length//8)
-            else:
-                hash_obj = hashlib.new(algorithm)
-
+            hash_obj = hashlib.new(algorithm)
             try:
-                if algorithm in ["cityhash", "farmhash", "murmurhash"]:
-                    # 这些算法已经在上面的条件中计算完成
-                    pass
-                else:
-                    with open(filepath, "rb") as f:
-                        for chunk in iter(lambda: f.read(4096), b""):
-                            if self.stop_flag:
-                                return
-                            hash_obj.update(chunk)
-                    
-                    hash_value = hash_obj.hexdigest()
+                with open(filepath, "rb") as f:
+                    for chunk in iter(lambda: f.read(4096), b""):
+                        if self.stop_flag:
+                            return
+                        hash_obj.update(chunk)
                 
+                hash_value = hash_obj.hexdigest()
                 if self.uppercase_var.get():
                     hash_value = hash_value.upper()
                 
@@ -1202,7 +1050,7 @@ class UltimateHashCalculator(TkinterDnD.Tk):
                 if self.compare_var.get() and self.compare_target.get():
                     if hash_value == self.compare_target.get().strip():
                         self.multi_result_tree.item(self.multi_result_tree.get_children()[-1], tags=('match',))
-                        self.multi_result_tree.tag_configure('match', background=self.match_color)
+                        self.multi_result_tree.tag_configure('match', background=self.match_color)  # 使用统一的亮绿色
 
 
             
@@ -1229,7 +1077,7 @@ class UltimateHashCalculator(TkinterDnD.Tk):
             "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         })
 
-    def calculate_directory_hash(self, algorithm, blake_length=None):
+    def calculate_directory_hash(self, algorithm):
         """计算目录中所有文件的哈希"""
         dir_path = self.dir_path.get()
         if not dir_path:
@@ -1278,106 +1126,15 @@ class UltimateHashCalculator(TkinterDnD.Tk):
             self.status_var.set(f"正在计算: {os.path.basename(filepath)} ({i+1}/{total_files})")
             
             # 计算哈希
+            hash_obj = hashlib.new(algorithm)
             try:
-                if algorithm == "blake3":
-                    hash_obj = blake3.blake3()
-                    with open(filepath, "rb") as f:
-                        for chunk in iter(lambda: f.read(4096), b""):
-                            hash_obj.update(chunk)
-                    hash_value = hash_obj.hexdigest()
+                with open(filepath, "rb") as f:
+                    for chunk in iter(lambda: f.read(4096), b""):
+                        if self.stop_flag:
+                            return
+                        hash_obj.update(chunk)
                 
-                elif algorithm == "siphash":
-                    hash_obj = pyhashxx.Hasher()
-                    with open(filepath, "rb") as f:
-                        for chunk in iter(lambda: f.read(4096), b""):
-                            hash_obj.update(chunk)
-                    hash_value = hex(hash_obj.intdigest())[2:]
-                
-                elif algorithm == "cityhash":
-                    with open(filepath, "rb") as f:
-                        content = f.read()
-                    hash_value = hex(cityhash.CityHash64(content))[2:]
-                
-                elif algorithm == "farmhash":
-                    with open(filepath, "rb") as f:
-                        content = f.read()
-                    hash_value = hex(farmhash.hash64(content))[2:]
-                
-                elif algorithm == "murmurhash":
-                    with open(filepath, "rb") as f:
-                        content = f.read()
-                    hash_value = hex(mmh3.hash64(content)[0])[2:]
-                
-                elif algorithm == "kangarootwelve":
-                    hash_obj = k12.KangarooTwelve()
-                    with open(filepath, "rb") as f:
-                        for chunk in iter(lambda: f.read(4096), b""):
-                            hash_obj.update(chunk)
-                    hash_value = hash_obj.hexdigest()
-                
-                elif algorithm == "streebog":
-                    hash_obj = streebog.Hasher()
-                    with open(filepath, "rb") as f:
-                        for chunk in iter(lambda: f.read(4096), b""):
-                            hash_obj.update(chunk)
-                    hash_value = hash_obj.hexdigest()
-                
-                elif algorithm == "fsb":
-                    hash_obj = fsb.Hasher()
-                    with open(filepath, "rb") as f:
-                        for chunk in iter(lambda: f.read(4096), b""):
-                            hash_obj.update(chunk)
-                    hash_value = hash_obj.hexdigest()
-                
-                elif algorithm == "meowhash":
-                    hash_obj = meowhash.Hasher()
-                    with open(filepath, "rb") as f:
-                        for chunk in iter(lambda: f.read(4096), b""):
-                            hash_obj.update(chunk)
-                    hash_value = hash_obj.hexdigest()
-                
-                elif algorithm == "wyhash":
-                    hash_obj = wyhash.Hasher()
-                    with open(filepath, "rb") as f:
-                        for chunk in iter(lambda: f.read(4096), b""):
-                            hash_obj.update(chunk)
-                    hash_value = hex(hash_obj.intdigest())[2:]
-                
-                elif algorithm == "t1ha":
-                    hash_obj = t1ha.Hasher64()
-                    with open(filepath, "rb") as f:
-                        for chunk in iter(lambda: f.read(4096), b""):
-                            hash_obj.update(chunk)
-                    hash_value = hex(hash_obj.intdigest())[2:]
-                
-                elif algorithm == "highwayhash":
-                    hash_obj = highwayhash.HighwayHash64(0)
-                    with open(filepath, "rb") as f:
-                        for chunk in iter(lambda: f.read(4096), b""):
-                            hash_obj.update(chunk)
-                    hash_value = hex(hash_obj.intdigest())[2:]
-                
-                elif algorithm == "xxhash3":
-                    hash_obj = xxhash.xxh3_64()
-                    with open(filepath, "rb") as f:
-                        for chunk in iter(lambda: f.read(4096), b""):
-                            hash_obj.update(chunk)
-                    hash_value = hex(hash_obj.intdigest())[2:]
-                
-                elif algorithm in ["blake2b", "blake2s"] and blake_length:
-                    hash_obj = hashlib.new(algorithm, digest_size=blake_length//8)
-                    with open(filepath, "rb") as f:
-                        for chunk in iter(lambda: f.read(4096), b""):
-                            hash_obj.update(chunk)
-                    hash_value = hash_obj.hexdigest()
-                
-                else:  # 标准哈希算法(md5, sha1等)
-                    hash_obj = hashlib.new(algorithm)
-                    with open(filepath, "rb") as f:
-                        for chunk in iter(lambda: f.read(4096), b""):
-                            hash_obj.update(chunk)
-                    hash_value = hash_obj.hexdigest()
-                
+                hash_value = hash_obj.hexdigest()
                 if self.uppercase_var.get():
                     hash_value = hash_value.upper()
                 
@@ -1399,8 +1156,10 @@ class UltimateHashCalculator(TkinterDnD.Tk):
                 if self.compare_var.get() and self.compare_target.get():
                     if hash_value == self.compare_target.get().strip():
                         self.multi_result_tree.item(self.multi_result_tree.get_children()[-1], tags=('match',))
-                        self.multi_result_tree.tag_configure('match', background=self.match_color)
+                        self.multi_result_tree.tag_configure('match', background=self.match_color)  # 使用统一的亮绿色
 
+
+            
             except IOError as e:
                 self.multi_result_tree.insert("", tk.END, values=(
                     os.path.basename(filepath),
@@ -1833,7 +1592,7 @@ class UltimateHashCalculator(TkinterDnD.Tk):
 专业哈希计算工具
 
 版本: 2.0
-作者: 杜玛
+作者: DeepSeek Chat
 
 功能:
 - 支持MD5、SHA1、SHA256、SHA512算法
@@ -1860,9 +1619,7 @@ class UltimateHashCalculator(TkinterDnD.Tk):
 
     def show_error(self, message):
         """显示错误消息"""
-        print(message)
         messagebox.showerror("错误", message)
-
 
 if __name__ == "__main__":
     app = UltimateHashCalculator()

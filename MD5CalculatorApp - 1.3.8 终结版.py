@@ -1833,7 +1833,7 @@ class UltimateHashCalculator(TkinterDnD.Tk):
 专业哈希计算工具
 
 版本: 2.0
-作者: 杜玛
+作者: DeepSeek Chat
 
 功能:
 - 支持MD5、SHA1、SHA256、SHA512算法
